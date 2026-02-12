@@ -3,50 +3,54 @@ const axios = require('axios');
 const cors = require('cors');
 const app = express();
 
-// শুধুমাত্র আপনার ডোমেইনগুলোকে অনুমতি দেওয়া হচ্ছে
+// শুধুমাত্র আপনার ডোমেইন লিস্ট
 const allowedOrigins = [
     'https://swapneel.bro.bd',
-    'https://www.swapneel.bro.bd',
-    'https://algoneel.github.io' // আপনার গিটহাব ইউজারনেম অনুযায়ী এটি রাখা নিরাপদ
+    'https://www.swapneel.bro.bd'
 ];
 
 const corsOptions = {
     origin: function (origin, callback) {
-        // যদি রিকোয়েস্ট আসা ডোমেইনটি তালিকায় থাকে অথবা রিকোয়েস্টটি নিজস্ব সার্ভার থেকে হয়
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        // যদি origin আমাদের লিস্টে থাকে, তবেই অনুমতি দাও
+        if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            console.log("CORS Blocked for origin:", origin);
-            callback(new Error('CORS Policy: This origin is not allowed!'));
+            // অন্য সব ক্ষেত্রে ব্লক করো
+            callback(new Error('CORS Policy: Access Denied!'));
         }
     },
+    methods: "POST", // শুধুমাত্র POST রিকোয়েস্ট এলাউড
     optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Render Environment Variable থেকে লিঙ্কটি নেবে
+// সিকিউরিটি লেয়ার: Referer চেক করা
+app.use((req, res, next) => {
+    const referer = req.headers.referer;
+    // যদি রিকোয়েস্ট আপনার ডোমেইন থেকে না আসে, তবে সরাসরি রিজেক্ট করো
+    if (!referer || !referer.startsWith('https://swapneel.bro.bd')) {
+        return res.status(403).send("Unauthorized Access: Your domain is not allowed.");
+    }
+    next();
+});
+
 const GOOGLE_SCRIPT_URL = process.env.SCRIPT_URL;
 
 app.post('/send-message', async (req, res) => {
     try {
         const { message } = req.body;
-        
-        if (!message) {
-            return res.status(400).send("Message empty");
+        if (!message || message.length > 500) { // মেসেজ সাইজ লিমিট করে দেওয়া হলো
+            return res.status(400).send("Invalid Message");
         }
 
-        await axios.post(GOOGLE_SCRIPT_URL, {
-            message: message
-        });
-
+        await axios.post(GOOGLE_SCRIPT_URL, { message: message });
         res.status(200).send("Success");
     } catch (error) {
-        console.error("Error:", error.message);
-        res.status(500).send("Failed to send message");
+        res.status(500).send("Server Error");
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Secure server running`));
