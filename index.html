@@ -1,89 +1,226 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chithime - Secret Message</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Secret Message | Anonymous Communication</title>
+    
+    <!-- Using Fonts from your Portfolio Theme -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        wpBlue: '#2271b1',
+                        wpDark: '#1d2327',
+                        wpLight: '#f0f0f1',
+                        wpBorder: '#dcdcde',
+                    },
+                    fontFamily: {
+                        serif: ['"Source Serif 4"', 'serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { 
-            font-family: 'Arial', sans-serif; 
-            background: #FF0050; 
-            display: flex; justify-content: center; align-items: center; 
-            height: 100vh; margin: 0;
+        :root {
+            --wp-admin-blue: #2271b1;
+            --wp-dark: #1d2327;
+            --wp-light-grey: #f0f0f1;
+            --wp-border: #dcdcde;
         }
-        .card {
-            background: white; padding: 30px; border-radius: 30px;
-            width: 85%; max-width: 350px; text-align: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+
+        body {
+            background-color: var(--wp-light-grey);
+            font-family: 'Inter', sans-serif;
+            color: var(--wp-dark);
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: contain;
         }
-        .profile-img {
-            width: 70px; height: 70px; background: #eee;
-            border-radius: 50%; margin: -65px auto 15px;
-            border: 5px solid white; display: flex;
-            align-items: center; justify-content: center; font-size: 30px;
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
         }
-        h2 { font-size: 18px; color: #333; margin-bottom: 5px; }
-        p { font-size: 14px; color: #666; margin-bottom: 20px; }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         textarea {
-            width: 100%; height: 120px; border: none;
-            background: #f5f5f5; border-radius: 15px;
-            padding: 15px; font-size: 16px; outline: none;
-            box-sizing: border-box; resize: none;
+            border: 1px solid var(--wp-border);
+            font-size: 16px !important; 
+            line-height: 1.5;
+            -webkit-appearance: none;
         }
-        button {
-            background: #000; color: white; border: none;
-            padding: 15px 30px; border-radius: 30px;
-            margin-top: 20px; cursor: pointer; font-weight: bold;
-            width: 100%; font-size: 16px;
+        textarea:focus {
+            border-color: var(--wp-admin-blue);
+            box-shadow: 0 0 0 1px var(--wp-admin-blue);
+        }
+
+        .toast {
+            background: var(--wp-dark);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: calc(100% - 32px);
+            max-width: 350px;
+        }
+
+        textarea::-webkit-scrollbar {
+            width: 4px;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: var(--wp-border);
+            border-radius: 10px;
         }
     </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
 
-<div class="card">
-    <div class="profile-img">👤</div>
-    <h2>গোপনে কিছু বলতে চাও?</h2>
-    <p>আপনার নাম গোপন থাকবে...</p>
-    <textarea id="userMsg" placeholder="এখানে আপনার গোপন বার্তাটি লিখুন..."></textarea>
-    <button onclick="sendMsg()">পাঠিয়ে দাও!</button>
-</div>
+    <!-- Toast Notification -->
+    <div id="notification" class="fixed top-6 left-1/2 -translate-x-1/2 -translate-y-[200%] toast text-white px-6 py-4 rounded-xl z-50 transition-all duration-500 flex items-center justify-between gap-4 border border-white/10">
+        <div class="flex items-center gap-3">
+            <span id="notif-icon">✅</span>
+            <span id="notif-text" class="text-sm font-medium tracking-wide">Success</span>
+        </div>
+    </div>
 
-<script>
-    function sendMsg() {
-        const msg = document.getElementById('userMsg').value;
-        const btn = document.querySelector('button');
+    <div class="w-full max-w-[420px] flex flex-col items-center">
+        
+        <!-- Main Workspace Card -->
+        <main class="w-full bg-white border border-wpBorder rounded-2xl p-6 sm:p-10 shadow-[0_4px_20px_rgba(0,0,0,0.05)] reveal active" id="card-reveal">
+            
+            <!-- User Identifier -->
+            <div class="flex flex-col items-center mb-6 sm:mb-8 text-center">
+                <div class="w-14 h-14 sm:w-16 sm:h-16 bg-wpLight rounded-full flex items-center justify-center text-2xl border border-wpBorder mb-3 sm:mb-4 shadow-inner">
+                    👤
+                </div>
+                <h2 class="font-serif text-xl sm:text-2xl font-bold text-wpDark">Send Anonymous Note</h2>
+                <p class="text-slate-500 text-[10px] sm:text-xs mt-1 uppercase tracking-[0.12em] font-semibold opacity-70">Please be honest and be kind</p>
+            </div>
 
-        if(!msg.trim()) { alert("কিছু তো লিখুন!"); return; }
+            <div class="space-y-4">
+                <div class="relative">
+                    <textarea 
+                        id="userMsg" 
+                        maxlength="200"
+                        placeholder="Type your message here..." 
+                        spellcheck="false"
+                        oninput="updateCount()"
+                        class="w-full h-36 sm:h-40 bg-white rounded-xl p-5 transition-all resize-none outline-none text-slate-700 placeholder:text-slate-300"
+                    ></textarea>
+                    <!-- Character Counter -->
+                    <div id="charCount" class="absolute bottom-3 right-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-white/90 px-1.5 py-0.5 rounded border border-transparent">
+                        0 / 200
+                    </div>
+                </div>
 
-        btn.innerText = "পাঠানো হচ্ছে...";
-        btn.disabled = true;
+                <!-- Primary Action -->
+                <button 
+                    id="sendBtn" 
+                    onclick="sendMsg()"
+                    class="w-full bg-wpDark hover:bg-black text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] touch-manipulation"
+                >
+                    <span id="btn-loader" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                    <span id="btn-text" class="uppercase tracking-widest text-[11px] font-bold">Transmit Message</span>
+                </button>
+            </div>
 
-        // আপনার রেন্ডার সার্ভারের লিঙ্ক (শেষে /send-message যোগ করা আছে)
-        const url = 'https://secret-message-h4tq.onrender.com/send-message';
+            <!-- Minimalist Footer -->
+            <div class="mt-8 pt-5 border-t border-slate-50 text-center">
+                <p class="text-[8px] sm:text-[9px] uppercase tracking-[0.2em] font-bold text-slate-300">
+                    Secure Anonymous Gateway
+                </p>
+            </div>
+        </main>
+    </div>
 
-        fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: msg })
-        })
-        .then(response => {
-            if (response.ok) {
-                alert("মেসেজটি আপনার Google Doc-এ সফলভাবে পাঠানো হয়েছে!");
-                document.getElementById('userMsg').value = "";
+    <script>
+        function updateCount() {
+            const textarea = document.getElementById('userMsg');
+            const countDisplay = document.getElementById('charCount');
+            const currentLength = textarea.value.length;
+            countDisplay.innerText = `${currentLength} / 200`;
+            
+            if (currentLength >= 200) {
+                countDisplay.classList.add('text-wpBlue');
             } else {
-                alert("সার্ভারে সমস্যা হয়েছে, আবার চেষ্টা করুন।");
+                countDisplay.classList.remove('text-wpBlue');
             }
-        })
-        .catch(err => {
-            alert("কানেকশন এরর!");
-            console.error(err);
-        })
-        .finally(() => {
-            btn.innerText = "পাঠিয়ে দাও!";
-            btn.disabled = false;
-        });
-    }
-</script>
+        }
 
+        function showNotification(text, icon = "✅") {
+            const notif = document.getElementById('notification');
+            const notifText = document.getElementById('notif-text');
+            const notifIcon = document.getElementById('notif-icon');
+            
+            notifText.innerText = text;
+            notifIcon.innerText = icon;
+            
+            notif.classList.remove('-translate-y-[200%]');
+            notif.classList.add('translate-y-0');
+            
+            setTimeout(() => {
+                notif.classList.add('-translate-y-[200%]');
+                notif.classList.remove('translate-y-0');
+            }, 3000);
+        }
+
+        async function sendMsg() {
+            const msgInput = document.getElementById('userMsg');
+            const msg = msgInput.value;
+            const btn = document.getElementById('sendBtn');
+            const btnText = document.getElementById('btn-text');
+            const btnLoader = document.getElementById('btn-loader');
+
+            if(!msg.trim()) { 
+                showNotification("Input field is empty.", "⚠️"); 
+                return; 
+            }
+
+            btn.disabled = true;
+            btnText.classList.add('opacity-30');
+            btnLoader.classList.remove('hidden');
+
+            try {
+                const response = await fetch('https://secret-message-h4tq.onrender.com/send-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg })
+                });
+
+                if (response.ok) {
+                    showNotification("Sent successfully.");
+                    msgInput.value = "";
+                    updateCount();
+                    msgInput.blur();
+                } else {
+                    showNotification("Server error.", "❌");
+                }
+            } catch (err) {
+                showNotification("Network error.", "🌐");
+            } finally {
+                btn.disabled = false;
+                btnText.classList.remove('opacity-30');
+                btnLoader.classList.add('hidden');
+            }
+        }
+
+        window.onload = () => {
+            const reveals = document.querySelectorAll(".reveal");
+            reveals.forEach((el, index) => {
+                setTimeout(() => {
+                    el.classList.add('active');
+                }, 100 * (index + 1));
+            });
+        };
+    </script>
 </body>
 </html>
