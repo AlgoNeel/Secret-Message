@@ -9,29 +9,33 @@ const allowedOrigins = [
     'https://www.swapneel.bro.bd'
 ];
 
-const corsOptions = {
+// CORS কনফিগারেশন
+app.use(cors({
     origin: function (origin, callback) {
-        // যদি origin আমাদের লিস্টে থাকে, তবেই অনুমতি দাও
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        // এখানে আমরা খুব কঠোর: যদি অরিজিন লিস্টে না থাকে, তবে সোজা ব্লক
+        if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            // অন্য সব ক্ষেত্রে ব্লক করো
+            // যদি কেউ ডাউনলোড করে চালায়, তার অরিজিন হবে null বা অন্য কিছু, যা এখানে ব্লক হবে
             callback(new Error('CORS Policy: Access Denied!'));
         }
-    },
-    methods: "POST", // শুধুমাত্র POST রিকোয়েস্ট এলাউড
-    optionsSuccessStatus: 200
-};
+    }
+}));
 
-app.use(cors(corsOptions));
 app.use(express.json());
 
-// সিকিউরিটি লেয়ার: Referer চেক করা
+// সব ধরণের রিকোয়েস্টের জন্য এক্সট্রা সিকিউরিটি লেয়ার
 app.use((req, res, next) => {
+    const origin = req.headers.origin;
     const referer = req.headers.referer;
-    // যদি রিকোয়েস্ট আপনার ডোমেইন থেকে না আসে, তবে সরাসরি রিজেক্ট করো
-    if (!referer || !referer.startsWith('https://swapneel.bro.bd')) {
-        return res.status(403).send("Unauthorized Access: Your domain is not allowed.");
+
+    // যদি অরিজিন বা রেফারার আপনার ডোমেইন না হয়, তবে সার্ভার সাড়া দেবে না
+    const isAllowedOrigin = allowedOrigins.includes(origin);
+    const isAllowedReferer = referer && referer.startsWith('https://swapneel.bro.bd');
+
+    if (!isAllowedOrigin && !isAllowedReferer) {
+        console.log("প্রবেশাধিকার নিষিদ্ধ! উৎস:", origin || "Unknown");
+        return res.status(403).json({ error: "Unauthorized access. This API only works on swapneel.bro.bd" });
     }
     next();
 });
@@ -41,10 +45,8 @@ const GOOGLE_SCRIPT_URL = process.env.SCRIPT_URL;
 app.post('/send-message', async (req, res) => {
     try {
         const { message } = req.body;
-        if (!message || message.length > 500) { // মেসেজ সাইজ লিমিট করে দেওয়া হলো
-            return res.status(400).send("Invalid Message");
-        }
-
+        
+        // গুগল স্ক্রিপ্টে ডাটা পাঠানো
         await axios.post(GOOGLE_SCRIPT_URL, { message: message });
         res.status(200).send("Success");
     } catch (error) {
@@ -53,4 +55,4 @@ app.post('/send-message', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Secure server running`));
+app.listen(PORT, () => console.log(`Secure Server Active`));
