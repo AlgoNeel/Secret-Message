@@ -74,15 +74,13 @@
 
         #captcha-display {
             background: #ffffff;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.05em;
             user-select: none;
-            text-decoration: line-through;
-            text-decoration-thickness: 1px;
-            font-style: italic;
+            font-weight: 800;
         }
 
         .floating-emoji {
-            animation: float 3.s ease-in-out infinite;
+            animation: float 3s ease-in-out infinite;
         }
         @keyframes float {
             0%, 100% { transform: translateY(0); }
@@ -92,7 +90,6 @@
 </head>
 <body class="flex flex-col items-center justify-start pt-12 p-6">
 
-    <!-- Notification -->
     <div id="notification" class="fixed top-8 left-1/2 -translate-x-1/2 -translate-y-[200%] toast text-white px-6 py-4 rounded-2xl z-[70] transition-all duration-500 flex items-center justify-between gap-3 shadow-xl">
         <div class="flex items-center gap-3">
             <span id="notif-icon">✨</span>
@@ -100,15 +97,14 @@
         </div>
     </div>
 
-    <!-- Help Modal -->
     <div id="help-overlay" class="fixed inset-0 z-[60] items-center justify-center p-8" onclick="toggleHelp()">
         <div class="w-full max-w-[340px] bg-white rounded-[32px] p-8 text-center" onclick="event.stopPropagation()">
             <div class="text-4xl mb-4">🕵️</div>
             <h2 class="font-fredoka text-2xl font-bold text-slate-800 mb-4">How it works</h2>
             <div class="space-y-4 text-slate-500 text-sm font-medium text-left">
                 <p>• Write a message anonymously.</p>
-                <p>• Solve the 7-digit security key.</p>
-                <p>• Your first message might take 40-50s as the secure connection initializes.</p>
+                <p>• Solve the math puzzle to verify you're human.</p>
+                <p>• Security ensures your messages stay private.</p>
             </div>
             <button onclick="toggleHelp()" class="mt-8 w-full bg-brandMain text-white font-bold py-4 rounded-2xl hover:scale-105 transition-transform">
                 Got it!
@@ -117,7 +113,6 @@
     </div>
 
     <div class="w-full max-w-[400px] flex flex-col items-center">
-        <!-- Logo / User Area -->
         <div class="flex flex-col items-center mb-6">
             <div class="relative mb-4">
                 <div class="w-20 h-20 bg-white rounded-full p-1 shadow-lg overflow-hidden border-4 border-white">
@@ -131,7 +126,6 @@
             <p class="text-slate-400 text-xs font-semibold">Truly anonymous. Truly private.</p>
         </div>
 
-        <!-- Main Card -->
         <main class="w-full bg-white rounded-[32px] p-6 main-card relative">
             
             <button onclick="toggleHelp()" class="absolute top-4 right-4 text-slate-300 hover:text-brandMain transition-colors">
@@ -152,26 +146,24 @@
                     </div>
                 </div>
 
-                <!-- Verification -->
                 <div class="bg-slate-50 p-4 rounded-2xl flex flex-col gap-3 border border-slate-100">
                     <div class="flex items-center justify-between px-1">
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Verification Code</span>
-                        <button onclick="generateCaptcha()" class="text-[9px] font-bold text-brandMain uppercase">Refresh</button>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Human Verification</span>
+                        <button onclick="fetchCaptcha()" class="text-[9px] font-bold text-brandMain uppercase">Refresh</button>
                     </div>
                     <div class="flex gap-2">
-                        <div id="captcha-display" class="w-1/2 h-12 rounded-xl border border-slate-100 flex items-center justify-center font-outfit font-extrabold text-sm text-slate-600 shadow-sm overflow-hidden whitespace-nowrap">
-                            REFRESH
+                        <div id="captcha-display" class="w-1/2 h-12 rounded-xl border border-slate-100 flex items-center justify-center font-outfit text-sm text-slate-600 shadow-sm overflow-hidden bg-white">
+                            Loading...
                         </div>
                         <input 
-                            type="text" 
+                            type="number" 
                             id="captchaInput" 
-                            placeholder="Enter Code"
+                            placeholder="Result"
                             class="w-1/2 h-12 bg-white rounded-xl text-center font-bold text-slate-700 shadow-sm border border-slate-100 text-sm focus:border-brandMain outline-none"
                         >
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
                 <div class="flex gap-2">
                     <button 
                         id="sendBtn" 
@@ -197,7 +189,7 @@
     </div>
 
     <script>
-        let currentCaptchaCode = "";
+        const API_BASE = "https://secret-message-h4tq.onrender.com";
         let activeNotificationTimeout = null;
 
         function toggleHelp() {
@@ -211,15 +203,19 @@
             }
         }
 
-        function generateCaptcha() {
-            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz0123456789!@#$%&*"; 
-            let result = "";
-            for (let i = 0; i < 7; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
+        // সার্ভার থেকে ক্যাপচা নিয়ে আসার ফাংশন
+        async function fetchCaptcha() {
+            const display = document.getElementById('captcha-display');
+            display.innerText = "Loading...";
+            try {
+                // সেশন বজায় রাখার জন্য credentials: 'include' ব্যবহার করা হয়েছে
+                const response = await fetch(`${API_BASE}/get-captcha`, { credentials: 'include' });
+                const data = await response.json();
+                display.innerText = data.question;
+                document.getElementById('captchaInput').value = "";
+            } catch (err) {
+                display.innerText = "Error!";
             }
-            currentCaptchaCode = result;
-            document.getElementById('captcha-display').innerText = result;
-            document.getElementById('captchaInput').value = "";
         }
 
         function updateCount() {
@@ -272,9 +268,8 @@
                 return; 
             }
 
-            if(captchaInput.value !== currentCaptchaCode) {
-                showNotification("Code mismatch!", "🧩");
-                generateCaptcha();
+            if(!captchaInput.value) {
+                showNotification("Solve math!", "🧩");
                 return;
             }
 
@@ -282,35 +277,28 @@
             btnText.innerText = "Sending...";
             btnLoader.classList.remove('hidden');
 
-            let isResolved = false;
-            
-            const slowServerTimer = setTimeout(() => {
-                if (!isResolved) {
-                    showNotification("Server waking up... may take 40-50s for first message.", "😴", true);
-                }
-            }, 4000);
-
             try {
-                const response = await fetch('https://secret-message-h4tq.onrender.com/send-message', {
+                const response = await fetch(`${API_BASE}/send-message`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg })
+                    credentials: 'include', // সেশন কুকি পাঠানোর জন্য গুরুত্বপূর্ণ
+                    body: JSON.stringify({ 
+                        message: msg,
+                        captchaAnswer: captchaInput.value 
+                    })
                 });
-
-                isResolved = true;
-                clearTimeout(slowServerTimer);
 
                 if (response.ok) {
                     showNotification("Sent successfully!");
                     msgInput.value = "";
                     updateCount();
-                    generateCaptcha();
+                    fetchCaptcha(); // সফল হওয়ার পর নতুন ক্যাপচা
                 } else {
-                    showNotification("Try again later.", "❌");
+                    const errorData = await response.json();
+                    showNotification(errorData.error || "Try again.", "❌");
+                    fetchCaptcha(); // ভুল হলে ক্যাপচা রিসেট
                 }
             } catch (err) {
-                isResolved = true;
-                clearTimeout(slowServerTimer);
                 showNotification("No connection.", "🌐");
             } finally {
                 btn.disabled = false;
@@ -320,7 +308,7 @@
         }
 
         window.onload = () => {
-            generateCaptcha();
+            fetchCaptcha();
         };
     </script>
 </body>
