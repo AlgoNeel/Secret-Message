@@ -1,7 +1,7 @@
 {
   "name": "ngl-proxy-server",
   "version": "1.0.0",
-  "description": "Proxy server to hide Google Apps Script URL with Captcha Security",
+  "description": "Proxy server to hide Google Apps Script URL with Math Captcha",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
