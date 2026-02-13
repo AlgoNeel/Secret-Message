@@ -104,7 +104,7 @@
             <div class="space-y-4 text-slate-500 text-sm font-medium text-left">
                 <p>• Write a message anonymously.</p>
                 <p>• Solve the math puzzle to verify you're human.</p>
-                <p>• Privacy and security are guaranteed.</p>
+                <p>• Security ensures your messages stay private.</p>
             </div>
             <button onclick="toggleHelp()" class="mt-8 w-full bg-brandMain text-white font-bold py-4 rounded-2xl hover:scale-105 transition-transform">
                 Got it!
@@ -190,6 +190,7 @@
 
     <script>
         const API_BASE = "https://secret-message-h4tq.onrender.com";
+        let currentCaptchaToken = ""; // Stateless token স্টোর করার জন্য
         let activeNotificationTimeout = null;
 
         function toggleHelp() {
@@ -203,18 +204,17 @@
             }
         }
 
-        // সার্ভার থেকে ম্যাথ ক্যাপচা নিয়ে আসা
         async function fetchCaptcha() {
             const display = document.getElementById('captcha-display');
-            display.innerText = "Loading...";
+            display.innerText = "Wait...";
             try {
-                const response = await fetch(`${API_BASE}/get-captcha`, { credentials: 'include' });
+                const response = await fetch(`${API_BASE}/get-captcha`);
                 const data = await response.json();
                 display.innerText = data.question;
+                currentCaptchaToken = data.token; // সার্ভার থেকে পাওয়া টোকেন সেভ হলো
                 document.getElementById('captchaInput').value = "";
             } catch (err) {
                 display.innerText = "Error!";
-                console.error("Captcha Fetch Error:", err);
             }
         }
 
@@ -227,17 +227,13 @@
         }
 
         function showNotification(text, icon = "✨", isSticky = false) {
-            if (activeNotificationTimeout) {
-                clearTimeout(activeNotificationTimeout);
-            }
-
+            if (activeNotificationTimeout) clearTimeout(activeNotificationTimeout);
             const notif = document.getElementById('notification');
             const notifText = document.getElementById('notif-text');
             const notifIcon = document.getElementById('notif-icon');
             
             notifText.innerText = text;
             notifIcon.innerText = icon;
-            
             notif.classList.remove('-translate-y-[200%]');
             notif.classList.add('translate-y-0');
 
@@ -257,15 +253,9 @@
             const btnText = document.getElementById('btn-text');
             const btnLoader = document.getElementById('btn-loader');
 
-            if(!msg.trim()) { 
-                showNotification("Write something!", "✍️"); 
-                return; 
-            }
-
-            if(!captchaInput.value) {
-                showNotification("Solve the math!", "🧩");
-                return;
-            }
+            if(!msg.trim()) { showNotification("Write something!", "✍️"); return; }
+            if(!captchaInput.value) { showNotification("Solve the puzzle!", "🧩"); return; }
+            if(!currentCaptchaToken) { showNotification("Wait for captcha...", "⏳"); return; }
 
             btn.disabled = true;
             btnText.innerText = "Sending...";
@@ -275,10 +265,10 @@
                 const response = await fetch(`${API_BASE}/send-message`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include', // সেশন কুকি আদান-প্রদানের জন্য এটি জরুরি
                     body: JSON.stringify({ 
                         message: msg,
-                        captchaAnswer: captchaInput.value 
+                        captchaAnswer: captchaInput.value,
+                        token: currentCaptchaToken // টোকেন পাঠানো হচ্ছে
                     })
                 });
 
@@ -286,15 +276,15 @@
                     showNotification("Sent successfully!", "🚀");
                     msgInput.value = "";
                     updateCount();
-                    fetchCaptcha(); // সফল হলে নতুন ক্যাপচা
+                    fetchCaptcha();
                 } else {
-                    const errorData = await response.json();
-                    showNotification(errorData.error || "Wrong answer!", "❌");
-                    fetchCaptcha(); // ভুল হলেও নতুন ক্যাপচা (সিকিউরিটি)
+                    const data = await response.json();
+                    showNotification(data.error || "Wrong answer!", "❌");
+                    fetchCaptcha();
                 }
             } catch (err) {
-                showNotification("Network Error!", "🌐");
-                console.error("Send Message Error:", err);
+                showNotification("Server is sleeping. Retrying...", "😴");
+                fetchCaptcha();
             } finally {
                 btn.disabled = false;
                 btnText.innerText = "Send Message";
@@ -302,10 +292,7 @@
             }
         }
 
-        // পেজ লোড হওয়ার সাথে সাথে ক্যাপচা নিয়ে আসা
-        window.onload = () => {
-            fetchCaptcha();
-        };
+        window.onload = fetchCaptcha;
     </script>
 </body>
 </html>
