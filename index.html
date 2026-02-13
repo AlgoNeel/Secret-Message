@@ -104,7 +104,7 @@
             <div class="space-y-4 text-slate-500 text-sm font-medium text-left">
                 <p>• Write a message anonymously.</p>
                 <p>• Solve the math puzzle to verify you're human.</p>
-                <p>• Security ensures your messages stay private.</p>
+                <p>• Privacy and security are guaranteed.</p>
             </div>
             <button onclick="toggleHelp()" class="mt-8 w-full bg-brandMain text-white font-bold py-4 rounded-2xl hover:scale-105 transition-transform">
                 Got it!
@@ -149,7 +149,7 @@
                 <div class="bg-slate-50 p-4 rounded-2xl flex flex-col gap-3 border border-slate-100">
                     <div class="flex items-center justify-between px-1">
                         <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Human Verification</span>
-                        <button onclick="fetchCaptcha()" class="text-[9px] font-bold text-brandMain uppercase">Refresh</button>
+                        <button onclick="fetchCaptcha()" class="text-[9px] font-bold text-brandMain uppercase hover:underline">Refresh</button>
                     </div>
                     <div class="flex gap-2">
                         <div id="captcha-display" class="w-1/2 h-12 rounded-xl border border-slate-100 flex items-center justify-center font-outfit text-sm text-slate-600 shadow-sm overflow-hidden bg-white">
@@ -158,7 +158,7 @@
                         <input 
                             type="number" 
                             id="captchaInput" 
-                            placeholder="Result"
+                            placeholder="Answer"
                             class="w-1/2 h-12 bg-white rounded-xl text-center font-bold text-slate-700 shadow-sm border border-slate-100 text-sm focus:border-brandMain outline-none"
                         >
                     </div>
@@ -177,7 +177,7 @@
                     <a 
                         href="https://docs.google.com/document/d/1OHkNYsRjof7kuZu5UPZ64l2IVArgRXQ29liy4oY_fm0/edit?usp=sharing" 
                         target="_blank"
-                        class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-fredoka text-lg py-4 rounded-[20px] transition-all active:scale-95 flex items-center justify-center gap-2 text-center"
+                        class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-fredoka text-lg py-4 rounded-[20px] transition-all active:scale-95 flex items-center justify-center text-center"
                     >
                         Inbox
                     </a>
@@ -203,18 +203,18 @@
             }
         }
 
-        // সার্ভার থেকে ক্যাপচা নিয়ে আসার ফাংশন
+        // সার্ভার থেকে ম্যাথ ক্যাপচা নিয়ে আসা
         async function fetchCaptcha() {
             const display = document.getElementById('captcha-display');
             display.innerText = "Loading...";
             try {
-                // সেশন বজায় রাখার জন্য credentials: 'include' ব্যবহার করা হয়েছে
                 const response = await fetch(`${API_BASE}/get-captcha`, { credentials: 'include' });
                 const data = await response.json();
                 display.innerText = data.question;
                 document.getElementById('captchaInput').value = "";
             } catch (err) {
                 display.innerText = "Error!";
+                console.error("Captcha Fetch Error:", err);
             }
         }
 
@@ -229,7 +229,6 @@
         function showNotification(text, icon = "✨", isSticky = false) {
             if (activeNotificationTimeout) {
                 clearTimeout(activeNotificationTimeout);
-                activeNotificationTimeout = null;
             }
 
             const notif = document.getElementById('notification');
@@ -244,15 +243,10 @@
 
             if (!isSticky) {
                 activeNotificationTimeout = setTimeout(() => {
-                    hideNotification();
+                    notif.classList.add('-translate-y-[200%]');
+                    notif.classList.remove('translate-y-0');
                 }, 4000);
             }
-        }
-
-        function hideNotification() {
-            const notif = document.getElementById('notification');
-            notif.classList.add('-translate-y-[200%]');
-            notif.classList.remove('translate-y-0');
         }
 
         async function sendMsg() {
@@ -269,7 +263,7 @@
             }
 
             if(!captchaInput.value) {
-                showNotification("Solve math!", "🧩");
+                showNotification("Solve the math!", "🧩");
                 return;
             }
 
@@ -281,7 +275,7 @@
                 const response = await fetch(`${API_BASE}/send-message`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include', // সেশন কুকি পাঠানোর জন্য গুরুত্বপূর্ণ
+                    credentials: 'include', // সেশন কুকি আদান-প্রদানের জন্য এটি জরুরি
                     body: JSON.stringify({ 
                         message: msg,
                         captchaAnswer: captchaInput.value 
@@ -289,17 +283,18 @@
                 });
 
                 if (response.ok) {
-                    showNotification("Sent successfully!");
+                    showNotification("Sent successfully!", "🚀");
                     msgInput.value = "";
                     updateCount();
-                    fetchCaptcha(); // সফল হওয়ার পর নতুন ক্যাপচা
+                    fetchCaptcha(); // সফল হলে নতুন ক্যাপচা
                 } else {
                     const errorData = await response.json();
-                    showNotification(errorData.error || "Try again.", "❌");
-                    fetchCaptcha(); // ভুল হলে ক্যাপচা রিসেট
+                    showNotification(errorData.error || "Wrong answer!", "❌");
+                    fetchCaptcha(); // ভুল হলেও নতুন ক্যাপচা (সিকিউরিটি)
                 }
             } catch (err) {
-                showNotification("No connection.", "🌐");
+                showNotification("Network Error!", "🌐");
+                console.error("Send Message Error:", err);
             } finally {
                 btn.disabled = false;
                 btnText.innerText = "Send Message";
@@ -307,6 +302,7 @@
             }
         }
 
+        // পেজ লোড হওয়ার সাথে সাথে ক্যাপচা নিয়ে আসা
         window.onload = () => {
             fetchCaptcha();
         };
